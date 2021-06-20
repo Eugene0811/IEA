@@ -10,7 +10,7 @@
  */
  #include "DHT.h"
 
-#define DHTPIN 2 
+#define DHTPIN 4 
 
 #define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321 
 // Uncomment the following line to enable serial debug output
@@ -55,6 +55,7 @@ char auth[] = "Du0raXAM8d7badnevZeVo1o_OBY2fiD6";
 
 DHT dht(DHTPIN, DHTTYPE);
 BlynkTimer timer;
+int t;
 
 bool onPowerState(const String &deviceId, bool &state) {
     if(deviceId==R_ID){
@@ -152,14 +153,20 @@ void setup() {
   pinMode(BD_LED,OUTPUT);
   pinMode(R_LED,OUTPUT);
 
+  t = millis();
   setupWiFi();
   setupSinricPro();
   timer.setInterval(1000, sendSensor);
   Blynk.begin(auth, WIFI_SSID, WIFI_PASS);
 }
 
-void loop() {
+void loop() { 
   SinricPro.handle();
   Blynk.run();
   timer.run();
+//  if(millis()- t >= 1000)
+//  {
+//    sendSensor();
+//    t = millis();
+//  }
 }
