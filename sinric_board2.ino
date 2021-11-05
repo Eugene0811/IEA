@@ -29,40 +29,42 @@
 #include "SinricPro.h"
 #include "SinricProLight.h"
 
+#include "DHT.h"
+
+#define DHTPIN 12     // Digital pin connected to the DHT sensor
+#define DHTTYPE DHT22   // DHT 22  (AM2302), AM2321
+DHT dht(DHTPIN, DHTTYPE);
+
 #define WIFI_SSID         "TNI_ROBOT_WIFI"    
 #define WIFI_PASS         "tnieng406"
-#define APP_KEY_3           "106b1eb0-a3c7-42f8-89d2-7f381b0243d1"      
-#define APP_SECRET_3        "5fa82026-a64d-4f10-b399-78658a385d4a-a1f86937-43cf-4c00-a9c3-c54cb68cd68b" 
-#define R_ID          "60cddeae8cf8a303b93a0d0e"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
-#define BD_ID        "60cdded48cf8a303b93a0d12"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
-
+#define APP_KEY_2           "1e081fa6-7fba-41f3-9cc9-5b92649eb5e7"      
+#define APP_SECRET_2        "4f216cf2-4980-4127-a84e-20152aa53bc2-c2f71101-582d-4cce-9a95-ddd66cb6ef42" 
+#define F_ID        "60cdc1c08cf8a303b93a0c21"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
+#define BK_ID        "60cdc22f2a231603cf26e24e"
 #define BAUD_RATE         9600                // Change baudrate to your need
 
 //#define BAUD_RATE         115200                // Change baudrate to your need
 
-
-#define BD_LED      22
-#define R_LED       23
-
+#define F_LED       25
+#define BK_LED      26
 
 bool onPowerState(const String &deviceId, bool &state) {
-    if(deviceId==R_ID){
+      if(deviceId==F_ID){
 //       Serial.printf("Device %s power turned %s \r\n", deviceId.c_str(), state?"on":"off");
       if(state){
-        digitalWrite(R_LED,HIGH);
-        Serial.println("RED LIGHT TURNED ON");
+        digitalWrite(F_LED,HIGH);
       }
       else{
-        digitalWrite(R_LED,LOW);
+        digitalWrite(F_LED,LOW);
         }
     }
-    else if(deviceId==BD_ID){
+      else if(deviceId==BK_ID){
 //       Serial.printf("Device %s power turned %s \r\n", deviceId.c_str(), state?"on":"off");
       if(state){
-        digitalWrite(BD_LED,HIGH);
+        digitalWrite(BK_LED,HIGH);
       }
       else{
-        digitalWrite(BD_LED,LOW);
+        digitalWrite(BK_LED,LOW);
         }
     }
   return true; // request handled properly
@@ -91,9 +93,8 @@ void setupWiFi() {
 }
 
 void setupSinricPro() {
-  // get a new Light device from SinricPro
-  SinricProLight &myLight1 = SinricPro[R_ID];
-  SinricProLight &myLight2 = SinricPro[BD_ID];
+  SinricProLight &myLight1 = SinricPro[F_ID];
+  SinricProLight &myLight2 = SinricPro[BK_ID];
 
   // set callback function to RED LIGHT
   myLight1.onPowerState(onPowerState);
@@ -101,24 +102,27 @@ void setupSinricPro() {
     // set callback function to RED LIGHT
   myLight2.onPowerState(onPowerState);
 
-
   // setup SinricPro
   SinricPro.onConnected([](){ Serial.println("Connected to SinricPro"); }); 
   SinricPro.onDisconnected([](){ Serial.println("Disconnected from SinricPro"); });
-  SinricPro.begin(APP_KEY_3, APP_SECRET_3);
+  SinricPro.begin(APP_KEY_2, APP_SECRET_2);
+/*---------------------------------------------------------------------*/
 }
 
 // main setup function
 void setup() {
   Serial.begin(BAUD_RATE); Serial.println("");
-
-  pinMode(BD_LED,OUTPUT);
-  pinMode(R_LED,OUTPUT);
-
+  pinMode(F_LED,OUTPUT);
+  pinMode(BK_LED,OUTPUT);
   setupWiFi();
   setupSinricPro();
+  dht.begin();
 }
 
 void loop() {
   SinricPro.handle();
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
+  Serial.println(t);
+  Serial.println(h);
 }
