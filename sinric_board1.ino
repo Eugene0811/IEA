@@ -28,14 +28,21 @@
 
 #include "SinricPro.h"
 #include "SinricProLight.h"
+#include <PubSubClient.h>
 
-#define WIFI_SSID         "Miracle-"    
-#define WIFI_PASS         "00000000"
+#define SERVER          "test.mosquitto.org"
+#define PORT            1883
+
+#define RED_LED         22
+#define GREEN_LED       23
+
+#define WIFI_SSID         "TNI_ROBOT_WIFI"    
+#define WIFI_PASS         "tnieng406"
 #define APP_KEY_1           "e78da579-8001-4b78-95a9-d4fcfa779b64"      
 #define APP_SECRET_1        "97862b77-3915-42d7-89bd-68d12931e1b7-3dc233e9-ef03-4511-a3fb-d220b7c45bf0"   
-#define K_ID          "60cccb918cf8a303b93a07b8"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
-#define L_ID        "60cc9aaf2a231603cf26dca3"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
-#define D_ID        "60cc9e4a2a231603cf26dcc7"
+#define K_ID                "60cccb918cf8a303b93a07b8"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
+#define L_ID                "60cc9aaf2a231603cf26dca3"    // Should look like "5dc1564130xxxxxxxxxxxxxx"
+#define D_ID                "60cc9e4a2a231603cf26dcc7"
 
 #define BAUD_RATE         9600                // Change baudrate to your need
 
@@ -44,6 +51,58 @@
 #define L_LED       5
 #define D_LED       27
 #define K_LED       26
+
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+String name_set[3] = {"Teeraphat Kullanankanjana\n",
+                  "Thanaporn Sanamontre\n",
+                  "Chayakotchamon Boonsanong\n"};
+
+void reconnectmqttserver() {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      client.subscribe("TNI-Robot/ntt");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      delay(5000);
+    }
+  }
+}
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  String MQTT_DATA = "";
+  int led;
+  for (int i=0;i<length;i++) {
+   MQTT_DATA += (char)payload[i];}
+   Serial.println(MQTT_DATA);
+  if(check(MQTT_DATA) == 0)
+  {
+    digitalWrite(RED_LED,LOW);
+    digitalWrite(GREEN_LED,HIGH);
+  }
+  delay(5000);
+  digitalWrite(GREEN_LED,LOW);
+  digitalWrite(RED_LED,HIGH);
+}
+
+int check(String name)
+{
+  int rc = 1;
+  for(int i = 0; i < 3; i++)
+    {
+      if(name == name_set[i])
+      rc = 0;   
+    }
+    return rc;  
+}
 
 bool onPowerState(const String &deviceId, bool &state) {
     if(deviceId==K_ID){
@@ -127,10 +186,21 @@ void setup() {
   pinMode(L_LED,OUTPUT);
   pinMode(D_LED,OUTPUT);
   pinMode(K_LED,OUTPUT);
+
+  pinMode(RED_LED, OUTPUT);
+  pinMode(GREEN_LED, OUTPUT);
+  digitalWrite(RED_LED,HIGH);
   setupWiFi();
   setupSinricPro();
+  client.setServer(SERVER, PORT);
+  client.setCallback(callback);
 }
 
 void loop() {
   SinricPro.handle();
+
+  if(!client.connected()) {
+    reconnectmqttserver();
+  }
+  client.loop();
 }
